@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chat</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+<body class="bg-gray-100 h-screen overflow-hidden">
+
+  <!-- Sidebar -->
+  <aside class="fixed top-0 left-0 w-[25%] h-full bg-white border-r overflow-y-auto">
+    <div class="p-4 font-semibold text-lg border-b flex justify-between items-center">
+      <span>Hi, <%= username %></span>
+      <a href="/logout" onclick="localStorage.removeItem('selectedUser')" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition text-sm">Logout</a>
+    </div>
+    <ul id="userList" class="divide-y">
+      <% users.forEach(user => { if (user.username !== username) { %>
+        <li class="p-4 cursor-pointer hover:bg-gray-100" onclick="selectUser('<%= user.username %>')">
+          <%= user.username %>
+        </li>
+      <% } }) %>
+    </ul>
+  </aside>
+
+  <!-- Main Chat Area -->
+  <main class="ml-[25%] w-[75%] h-full flex flex-col bg-gray-50">
+
+    <!-- Chat Header (Sticky) -->
+    <div id="chatHeader" class="sticky top-0 z-10 px-4 py-3 border-b font-semibold bg-white text-lg shadow hidden">
+      <!-- Dynamic Username Here -->
+    </div>
+
+    <!-- Messages Area -->
+    <div id="messages" class="flex-1 overflow-y-auto px-4 py-3 space-y-3" style="scroll-behavior: smooth;"></div>
+
+    <!-- Input Area (Fixed Bottom) -->
+    <div class="bg-white px-4 py-3 shadow flex gap-2">
+      <input id="msgInput" type="text" placeholder="Type a message..." class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      <button onclick="sendMessage()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">Send</button>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const currentUser = '<%= username %>';
+    const ENCRYPTION_KEY = '<%= encryptionKey %>';
+    let selectedUser = null;
+
+    function selectUser(user) {
+      selectedUser = user;
+      localStorage.setItem('selectedUser', user);
+      document.getElementById('messages').innerHTML = '';
+      document.getElementById('chatHeader').innerText = `Chat with ${user}`;
+      document.getElementById('chatHeader').classList.remove('hidden');
+      socket.emit('loadPrivateMessages', { from: currentUser, to: user });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedUser = localStorage.getItem('selectedUser');
+      if (savedUser) {
+        selectUser(savedUser);
+      }
+    });
+
+    function sendMessage() {
+      const input = document.getElementById('msgInput');
+      const msg = input.value.trim();
+      if (msg !== '' && selectedUser) {
+        const encryptedMsg = CryptoJS.AES.encrypt(msg, ENCRYPTION_KEY).toString();
+        socket.emit('privateMessage', {
+          from: currentUser,
+          to: selectedUser,
+          message: encryptedMsg
+        });
+        input.value = '';
+      }
+    }
+
+    socket.on('chatMessage', data => {
+      appendMessage(data.user, data.message, data.time);
+    });
+
+    function appendMessage(user, message, time = '') {
+      const msgWrapper = document.createElement('div');
+      const isCurrentUser = user === currentUser;
+      msgWrapper.className = `flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`;
+
+      let decryptedMsg;
+      try {
+        const bytes = CryptoJS.AES.decrypt(message, ENCRYPTION_KEY);
+        decryptedMsg = bytes.toString(CryptoJS.enc.Utf8) || '[Invalid message]';
+      } catch {
+        decryptedMsg = '[Decryption failed]';
+      }
+
+      const msgBubble = document.createElement('div');
+      msgBubble.className = `max-w-[70%] px-4 py-2 rounded-lg shadow relative ${
+        isCurrentUser
+          ? 'bg-[rgba(220,248,198,0.8)] rounded-br-none'
+          : 'bg-white text-gray-800 rounded-bl-none'
+      }`;
+
+      msgBubble.innerHTML = `
+        <p class="mb-0.7 pr-12">${decryptedMsg}</p>
+        <span class="absolute bottom-2 right-1 text-xs text-gray-500">${time}</span>
+      `;
+
+      msgWrapper.appendChild(msgBubble);
+
+      const messageContainer = document.getElementById('messages');
+      messageContainer.appendChild(msgWrapper);
+
+      // Always scroll to bottom on new message
+      messageContainer.scrollTop = messageContainer.scrollHeight;
+    }
+  </script>
+</body>
+</html>
