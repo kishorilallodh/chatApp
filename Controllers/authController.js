@@ -8,17 +8,24 @@ exports.getRegister = (req, res) => {
 
 exports.postRegister = async (req, res) => {
   const { username, email, password } = req.body;
+  const imageUrl = req.file ? req.file.path : null;
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ username, email, password: hashedPassword });
+    const user = new User({
+      username,
+      email,
+      password: hashedPassword,
+      image: imageUrl
+    });
     await user.save();
     res.redirect('/login');
-  } catch (err) {
-    console.error(err);
-    res.send('Registration Failed');
-  }
+  }catch (err) {
+  console.error('Error during registration:', JSON.stringify(err, null, 2)); // 👈 Properly print error
+  res.status(500).send(`<pre>${JSON.stringify(err, null, 2)}</pre>`);
+}
 };
+
 
 exports.getLogin = (req, res) => {
   res.render('login');

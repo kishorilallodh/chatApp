@@ -6,6 +6,8 @@ const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const path = require('path');
 const Message = require('./modules/Message'); // updated model with from, to, message
+const userRoutes = require('./routes/userRoutes');
+const homeRoutes = require('./routes/homeRoute');
 
 const http = require('http');
 const server = http.createServer(app);
@@ -28,8 +30,8 @@ mongoose.connect(process.env.MONGO_URI)
   .catch((err) => console.log(err));
 
 // Routes
-const userRoutes = require('./routes/userRoutes');
 app.use('/', userRoutes);
+app.use('/', homeRoutes);
 
 // ---------------- Socket.IO Private Chat Logic ----------------
 io.on('connection', (socket) => {

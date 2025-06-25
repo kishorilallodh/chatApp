@@ -7,7 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 </head>
-<body class="bg-gray-100 h-screen overflow-hidden">
+<body class="bg-gray-100 h-screen overflow-hidden italic font-poppins">
 
   <!-- Sidebar -->
   <aside class="fixed top-0 left-0 w-[25%] h-full bg-white border-r overflow-y-auto">
@@ -15,13 +15,19 @@
       <span>Hi, <%= username %></span>
       <a href="/logout" onclick="localStorage.removeItem('selectedUser')" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition text-sm">Logout</a>
     </div>
-    <ul id="userList" class="divide-y">
-      <% users.forEach(user => { if (user.username !== username) { %>
-        <li class="p-4 cursor-pointer hover:bg-gray-100" onclick="selectUser('<%= user.username %>')">
-          <%= user.username %>
-        </li>
-      <% } }) %>
-    </ul>
+ <ul id="userList" class="divide-y">
+  <% users.forEach(user => { if (user.username !== username) { %>
+    <li class="p-4 cursor-pointer hover:bg-gray-100 flex items-center gap-3" onclick="selectUser('<%= user.username %>')">
+      <img 
+        src="<%= user.image ? user.image : 'https://ui-avatars.com/api/?name=' + user.username + '&background=random' %>" 
+        alt="User Image" 
+        class="w-10 h-10 rounded-full object-cover border" 
+      />
+      <span class="text-gray-800 font-medium"><%= user.username %></span>
+    </li>
+  <% } }) %>
+</ul>
+
   </aside>
 
   <!-- Main Chat Area -->
@@ -38,7 +44,7 @@
     <!-- Input Area (Fixed Bottom) -->
     <div class="bg-white px-4 py-3 shadow flex gap-2">
       <input id="msgInput" type="text" placeholder="Type a message..." class="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-      <button onclick="sendMessage()" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">Send</button>
+     
     </div>
   </main>
 
@@ -54,7 +60,7 @@
       selectedUser = user;
       localStorage.setItem('selectedUser', user);
       document.getElementById('messages').innerHTML = '';
-      document.getElementById('chatHeader').innerText = `Chat with ${user}`;
+      document.getElementById('chatHeader').innerText = `you with ${user}`;
       document.getElementById('chatHeader').classList.remove('hidden');
       socket.emit('loadPrivateMessages', { from: currentUser, to: user });
     }
@@ -64,7 +70,17 @@
       if (savedUser) {
         selectUser(savedUser);
       }
+
+      // 👇 Add Enter key listener for sending message
+      const input = document.getElementById('msgInput');
+      input.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter') {
+          event.preventDefault(); // Prevent default behavior (just in case)
+          sendMessage();
+        }
+      });
     });
+    
 
     function sendMessage() {
       const input = document.getElementById('msgInput');
