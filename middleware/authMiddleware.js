@@ -13,7 +13,7 @@ exports.verifyUser = async (req, res, next) => {
     req.user = user;
     next();
   } catch (err) {
-    console.error(err);
+    console.error('Error verifying user:', JSON.stringify(err, null, 2));
     res.clearCookie('token');
     res.redirect('/login');
   }

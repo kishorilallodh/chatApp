@@ -16,7 +16,7 @@ exports.getChatPage = async (req, res) => {
       encryptionKey: process.env.ENCRYPTION_KEY
     });
   } catch (err) {
-    console.error(err);
+    console.error('Error loading chat page:', JSON.stringify(err, null, 2));
     res.redirect('/login');
   }
 };

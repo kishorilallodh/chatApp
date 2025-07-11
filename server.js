@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
 const path = require('path');
-const Message = require('./modules/Message'); // updated model with from, to, message
+const Message = require('./modules/Message');
 const userRoutes = require('./routes/userRoutes');
 const homeRoutes = require('./routes/homeRoute');
 
@@ -27,9 +27,8 @@ app.set('views', __dirname + '/views');
 // Connect MongoDB
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB Connected'))
-  .catch((err) => console.log(err));
+  .catch((err) => console.error('MongoDB Connection Error:', JSON.stringify(err, null, 2))); // 🔁
 
-// Routes
 app.use('/', userRoutes);
 app.use('/', homeRoutes);
 
@@ -37,7 +36,6 @@ app.use('/', homeRoutes);
 io.on('connection', (socket) => {
   console.log('A user connected');
 
-  // Load chat history between two users
   socket.on('loadPrivateMessages', async ({ from, to }) => {
     try {
       const messages = await Message.find({
@@ -58,17 +56,15 @@ io.on('connection', (socket) => {
         });
       });
     } catch (err) {
-      console.error('Error loading private messages:', err);
+      console.error('Error loading private messages:', JSON.stringify(err, null, 2)); // 🔁
     }
   });
 
-  // Handle sending new private message
   socket.on('privateMessage', async ({ from, to, message }) => {
     try {
       const newMessage = new Message({ from, to, message });
       await newMessage.save();
 
-      // Broadcast message to all clients — optionally, limit to only `from` and `to` later
       io.emit('chatMessage', {
         user: from,
         message,
@@ -78,13 +74,19 @@ io.on('connection', (socket) => {
         })
       });
     } catch (err) {
-      console.error('Error saving message:', err);
+      console.error('Error saving message:', JSON.stringify(err, null, 2)); // 🔁
     }
   });
 
   socket.on('disconnect', () => {
     console.log('User disconnected');
   });
+});
+
+// Optional: Global Express error handler (only if needed)
+app.use((err, req, res, next) => {
+  console.error('Global Express Error:', JSON.stringify(err, null, 2)); // 🔁
+  res.status(500).send('Something went wrong!');
 });
 
 // Start server
